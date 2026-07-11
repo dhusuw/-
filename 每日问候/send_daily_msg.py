@@ -184,9 +184,7 @@ def main():
     lt_list = tasks.get("long_term", [])
     lt_line = "、".join(lt_list) if lt_list else "无"
 
-    desp = f"""![HK416]({PHOTO_URL})
-
-早。
+    desp = f"""![HK416]({PHOTO_URL}) 早。
 
 {date_str} 星期{weekday_str} {time_str}
 
