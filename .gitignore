@@ -1,0 +1,14 @@
+# 忽略所有
+/*
+
+# 保留每日问候
+!/每日问候/
+!/每日问候/*
+
+# 保留 GitHub Actions 工作流
+!/.github/
+!/.github/workflows/
+!/.github/workflows/daily-message.yml
+
+# 保留 gitignore 本身
+!/.gitignore
