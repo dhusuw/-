@@ -5,9 +5,11 @@
 !/每日问候/
 !/每日问候/*
 
-# 保留 GitHub Actions 工作流
+# 保留 GitHub Actions 工作流（仅 daily-message.yml）
 !/.github/
+/.github/*
 !/.github/workflows/
+/.github/workflows/*
 !/.github/workflows/daily-message.yml
 
 # 保留 gitignore 本身
