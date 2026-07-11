@@ -68,6 +68,25 @@ def format_weather(weather: dict) -> str:
         return "天气数据获取失败"
 
 
+def format_weather_narrative(weather: dict) -> str:
+    """口述风格天气"""
+    try:
+        cur = weather["current_condition"][0]
+        fc = weather["weather"][0]
+        desc = cur["weatherDesc"][0]["value"]
+        temp = cur["temp_C"]
+        feels = cur["FeelsLikeC"]
+        hi = fc["maxtempC"]
+        lo = fc["mintempC"]
+        uv = cur["uvIndex"]
+        hum = cur["humidity"]
+
+        uv_text = {0:"无", 1:"极低", 2:"低", 3:"中等", 4:"中等", 5:"中高", 6:"高", 7:"很高", 8:"很高", 9:"极高", 10:"极高", 11:"极端"}.get(uv, str(uv))
+        return f"{desc}，{temp}度，体感{feels}，湿度百分之{hum}，UV{uv_text}。今日{lo}到{hi}度"
+    except Exception:
+        return "天气数据获取失败"
+
+
 # ── 目标 ──────────────────────────────────────────────
 
 def load_tasks(tasks_path: str) -> dict:
@@ -93,6 +112,16 @@ def format_tasks(tasks: dict, weekday_str: str) -> str:
             lines.append(f"📌 {t}")
 
     return "\n".join(lines) if lines else "暂无安排"
+
+
+def get_tasks_list(tasks: dict, weekday_str: str) -> list[str]:
+    """提取今日任务为列表"""
+    items = list(tasks.get("daily", []))
+    week_key = f"周{weekday_str}"
+    weekly = tasks.get("weekly", {})
+    if week_key in weekly:
+        items.extend(weekly[week_key])
+    return items
 
 
 def format_long_term(tasks: dict) -> str:
@@ -138,39 +167,36 @@ def main():
     # 2. 目标
     tasks = load_tasks(str(tasks_path))
 
-    # 3. 组装报告
-    title = f"HK416 · {date_str} 早安"
+    # 3. 组装口述简报
+    title = f"HK416 · {date_str} 简报"
+
+    # 天气一句话
+    weather_line = format_weather_narrative(weather)
+
+    # 注意事项
+    notes_line = "；".join(notes) if notes else "天气正常，无需特别注意。"
+
+    # 今日任务
+    tasks_list = get_tasks_list(tasks, weekday_str)
+    tasks_line = "、".join(tasks_list) if tasks_list else "暂无安排"
+
+    # 长期目标
+    lt_list = tasks.get("long_term", [])
+    lt_line = "、".join(lt_list) if lt_list else "无"
 
     desp = f"""![HK416]({PHOTO_URL})
 
-## HK416 · 早安，指挥官。
+指挥官，早。
 
-**📅 {date_str}  星期{weekday_str}  {time_str}**
+{date_str}，星期{weekday_str}，{time_str}。例行简报。
 
----
+{city}，{weather_line}。{notes_line}
 
-### 🌤 今日天气 · {city}
+今日事项：{tasks_line}。
 
-{format_weather(weather)}
+长期目标：{lt_line}。
 
-> ⚠️ {"  |  ".join(notes)}
-
----
-
-### 📋 今日待完成
-
-{format_tasks(tasks, weekday_str)}
-
----
-
-### 🎯 长期目标
-
-{format_long_term(tasks)}
-
----
-
-*HK416 · 每日报告 · 别磨蹭。*
-"""
+以上。别让我说第二遍。"""
 
     result = send_serverchan(sendkey, title, desp)
     print(f"推送结果: {result}")
