@@ -11,20 +11,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 安装依赖
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq fonts-noto-cjk 2>/dev/null || sudo apt-get install -y -qq fonts-wqy-zenhei 2>/dev/null || true
-          pip install pillow requests
-
-      - name: 配置 Git
-        run: |
-          git config user.name "HK416"
-          git config user.email "hk416@daily.report"
-
-      - name: 生成并发送报告
+      - name: 发送每日报告
         env:
           SCT_SENDKEY: ${{ secrets.SCT_SENDKEY }}
           MSG_CITY: "Guangzhou"
-          GH_PAT: ${{ secrets.GH_PAT }}
         run: python 每日问候/send_daily_msg.py
