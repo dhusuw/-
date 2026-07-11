@@ -1,7 +1,7 @@
 """
 每日报告推送脚本
-包含：问好 → 天气/注意事项 → 今日目标 → 长期目标
-通过 Server酱 发送到微信 · GitHub Actions 每日定时触发
+PIL渲染：人物左 + 文字右 → 单张图片 → Server酱推送
+GitHub Actions 每日定时触发
 """
 
 import os
@@ -10,12 +10,23 @@ import urllib.request
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
+
+
+# ── 配置 ──────────────────────────────────────────────
+
+PHOTO_FILE = "50_transparent.png"
+REPORT_FILE = "daily_report.png"
+IMG_W = 150  # 人物宽度
+CANVAS_W = 800
+CANVAS_H = 390
+PAD = 20
+TEXT_X = IMG_W + PAD + 15  # 文字起始x
 
 
 # ── 天气 ──────────────────────────────────────────────
 
 def fetch_weather(city: str) -> dict:
-    """wttr.in 免费天气 API，无需密钥"""
     url = f"https://wttr.in/{urllib.parse.quote(city)}?format=j1"
     req = urllib.request.Request(url, headers={"User-Agent": "daily-report/1.0"})
     with urllib.request.urlopen(req, timeout=15) as resp:
@@ -23,7 +34,6 @@ def fetch_weather(city: str) -> dict:
 
 
 def weather_notes(weather: dict) -> list[str]:
-    """根据天气数据生成注意事项"""
     notes = []
     try:
         cur = weather["current_condition"][0]
@@ -32,44 +42,28 @@ def weather_notes(weather: dict) -> list[str]:
         uv = int(cur["uvIndex"])
         weather_desc = cur["weatherDesc"][0]["value"].lower()
         windspeed = int(cur["windspeedKmph"])
-
         if "rain" in weather_desc or "drizzle" in weather_desc or "shower" in weather_desc:
-            notes.append("今日有雨，出门记得带伞")
+            notes.append("有雨，带伞")
         if temp_c >= 35:
-            notes.append("高温预警，注意防暑，减少户外活动")
+            notes.append("高温预警，注意防暑")
         elif temp_c >= 30:
-            notes.append("天气较热，注意补充水分")
+            notes.append("较热，多喝水")
         elif temp_c <= 10:
-            notes.append("气温偏低，注意保暖")
+            notes.append("天冷，注意保暖")
         if uv >= 6:
-            notes.append("紫外线强，外出注意防晒")
+            notes.append("紫外线强，注意防晒")
         if humidity >= 85:
-            notes.append("湿度较大，体感闷热")
+            notes.append("湿度大，体感闷热")
         if windspeed >= 30:
-            notes.append("风力较大，注意出行安全")
+            notes.append("风大，注意出行安全")
         if not notes:
             notes.append("天气不错，适合出门")
     except Exception:
-        notes.append("天气数据解析异常，请自行判断")
+        notes.append("天气数据异常")
     return notes
 
 
-def format_weather(weather: dict) -> str:
-    """格式化天气信息"""
-    try:
-        cur = weather["current_condition"][0]
-        fc = weather["weather"][0]
-        return (
-            f"**🌤 {cur['weatherDesc'][0]['value']}  {cur['temp_C']}°C**  "
-            f"体感 {cur['FeelsLikeC']}°C  |  湿度 {cur['humidity']}%  |  风力 {cur['windspeedKmph']}km/h\n"
-            f"🌡 今日 {fc['mintempC']}°C ~ {fc['maxtempC']}°C  |  UV指数 {cur['uvIndex']}"
-        )
-    except Exception:
-        return "天气数据获取失败"
-
-
-def format_weather_narrative(weather: dict) -> str:
-    """口述风格天气"""
+def weather_narrative(weather: dict) -> str:
     try:
         cur = weather["current_condition"][0]
         fc = weather["weather"][0]
@@ -80,42 +74,20 @@ def format_weather_narrative(weather: dict) -> str:
         lo = fc["mintempC"]
         uv = cur["uvIndex"]
         hum = cur["humidity"]
-
-        uv_text = {0:"无", 1:"极低", 2:"低", 3:"中等", 4:"中等", 5:"中高", 6:"高", 7:"很高", 8:"很高", 9:"极高", 10:"极高", 11:"极端"}.get(uv, str(uv))
-        return f"{desc}，{temp}度，体感{feels}，湿度百分之{hum}，UV{uv_text}。今日{lo}到{hi}度"
+        uv_text = {0:"无",1:"极低",2:"低",3:"中等",4:"中等",5:"中高",6:"高",7:"很高",8:"很高",9:"极高",10:"极高",11:"极端"}.get(uv, str(uv))
+        return f"{desc}，{temp}° 体感{feels}°  湿度{hum}%  UV{uv_text}  {lo}°~{hi}°"
     except Exception:
         return "天气数据获取失败"
 
 
 # ── 目标 ──────────────────────────────────────────────
 
-def load_tasks(tasks_path: str) -> dict:
-    """加载任务数据"""
-    with open(tasks_path, "r", encoding="utf-8") as f:
+def load_tasks(path: str) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
 
 
-def format_tasks(tasks: dict, weekday_str: str) -> str:
-    """格式化今日目标"""
-    lines = []
-
-    # 每日任务
-    if tasks.get("daily"):
-        for i, t in enumerate(tasks["daily"], 1):
-            lines.append(f"{i}. {t}")
-
-    # 星期任务
-    week_key = f"周{weekday_str}"
-    weekly = tasks.get("weekly", {})
-    if week_key in weekly:
-        for t in weekly[week_key]:
-            lines.append(f"📌 {t}")
-
-    return "\n".join(lines) if lines else "暂无安排"
-
-
 def get_tasks_list(tasks: dict, weekday_str: str) -> list[str]:
-    """提取今日任务为列表"""
     items = list(tasks.get("daily", []))
     week_key = f"周{weekday_str}"
     weekly = tasks.get("weekly", {})
@@ -124,17 +96,108 @@ def get_tasks_list(tasks: dict, weekday_str: str) -> list[str]:
     return items
 
 
-def format_long_term(tasks: dict) -> str:
-    """格式化长期目标"""
-    lt = tasks.get("long_term", [])
-    if not lt:
-        return "暂无"
-    return "\n".join(f"▸ {t}" for t in lt)
+# ── 字体 ──────────────────────────────────────────────
+
+def get_font(size: int) -> ImageFont.FreeTypeFont:
+    """尝试多个中文字体路径"""
+    candidates = [
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+        "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+        "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+        "C:/Windows/Fonts/msyh.ttc",
+        "C:/Windows/Fonts/simsun.ttc",
+        "C:/Windows/Fonts/simhei.ttf",
+    ]
+    for p in candidates:
+        if os.path.exists(p):
+            return ImageFont.truetype(p, size)
+    return ImageFont.load_default()
 
 
-# ── 照片 ──────────────────────────────────────────────
+# ── 渲染 ──────────────────────────────────────────────
 
-PHOTO_URL = "https://raw.githubusercontent.com/dhusuw/-/main/%E6%AF%8F%E6%97%A5%E9%97%AE%E5%80%99/50_transparent.png"
+def render_report(
+    photo_path: str,
+    output_path: str,
+    date_str: str,
+    weekday_str: str,
+    time_str: str,
+    city: str,
+    weather_str: str,
+    notes: list[str],
+    tasks_line: str,
+    lt_line: str,
+):
+    # 画布
+    img = Image.new("RGBA", (CANVAS_W, CANVAS_H), (18, 18, 24, 255))
+    draw = ImageDraw.Draw(img)
+
+    # 人物照片
+    try:
+        photo = Image.open(photo_path)
+        if photo.mode != "RGBA":
+            photo = photo.convert("RGBA")
+        ph = int(IMG_W * photo.height / photo.width)
+        photo = photo.resize((IMG_W, ph), Image.LANCZOS)
+        img.paste(photo, (PAD, PAD), photo)
+    except Exception:
+        pass
+
+    font_large = get_font(32)
+    font_mid = get_font(20)
+    font_small = get_font(17)
+    white = (240, 240, 240, 255)
+    grey = (180, 180, 190, 255)
+    accent = (120, 200, 255, 255)  # 蓝色强调
+
+    y = PAD + 5
+
+    # 问候行
+    draw.text((TEXT_X, y), "早。", font=font_large, fill=white)
+    y += 45
+
+    # 日期时间
+    draw.text((TEXT_X, y), f"{date_str}  星期{weekday_str}  {time_str}", font=font_mid, fill=grey)
+    y += 35
+
+    # 分隔
+    y += 5
+    draw.line([(TEXT_X, y), (CANVAS_W - PAD, y)], fill=(60, 60, 70, 255), width=1)
+    y += 15
+
+    # 天气
+    draw.text((TEXT_X, y), f"{city}  {weather_str}", font=font_small, fill=white)
+    y += 28
+
+    # 注意事项
+    notes_str = "  ·  ".join(notes)
+    draw.text((TEXT_X, y), notes_str, font=font_small, fill=accent)
+    y += 35
+
+    # 分隔
+    draw.line([(TEXT_X, y), (CANVAS_W - PAD, y)], fill=(60, 60, 70, 255), width=1)
+    y += 15
+
+    # 今日任务
+    draw.text((TEXT_X, y), "今日事项", font=font_mid, fill=accent)
+    y += 30
+    draw.text((TEXT_X, y), tasks_line, font=font_small, fill=white)
+    y += 35
+
+    # 长期目标
+    draw.text((TEXT_X, y), "别忘了", font=font_mid, fill=accent)
+    y += 30
+    draw.text((TEXT_X, y), lt_line, font=font_small, fill=grey)
+    y += 38
+
+    # 结尾
+    draw.text((TEXT_X, y), "……别死了。", font=font_small, fill=(150, 150, 160, 255))
+
+    img.save(output_path, "PNG", optimize=True)
+    print(f"报告已渲染: {output_path} ({img.size})")
 
 
 # ── 发送 ──────────────────────────────────────────────
@@ -154,51 +217,55 @@ def main():
     city = os.environ.get("MSG_CITY", "Guangzhou")
     script_dir = Path(__file__).parent
     tasks_path = script_dir / "tasks.json"
+    photo_path = script_dir / PHOTO_FILE
+    report_path = script_dir / REPORT_FILE
 
     now = datetime.now(timezone(timedelta(hours=8)))
     date_str = now.strftime("%Y-%m-%d")
     weekday_str = ["一", "二", "三", "四", "五", "六", "日"][now.weekday()]
     time_str = now.strftime("%H:%M")
 
-    # 1. 天气
+    # 数据
     weather = fetch_weather(city)
     notes = weather_notes(weather)
-
-    # 2. 目标
+    weather_str = weather_narrative(weather)
     tasks = load_tasks(str(tasks_path))
-
-    # 3. 组装口述简报
-    title = f"HK416 · {date_str} 简报"
-
-    # 天气一句话
-    weather_line = format_weather_narrative(weather)
-
-    # 注意事项
-    notes_line = "；".join(notes) if notes else "天气正常，无需特别注意。"
-
-    # 今日任务
     tasks_list = get_tasks_list(tasks, weekday_str)
     tasks_line = "、".join(tasks_list) if tasks_list else "暂无安排"
-
-    # 长期目标
     lt_list = tasks.get("long_term", [])
     lt_line = "、".join(lt_list) if lt_list else "无"
 
-    desp = f"""![HK416]({PHOTO_URL}) 早。
+    # 渲染报告图片
+    render_report(
+        str(photo_path), str(report_path),
+        date_str, weekday_str, time_str, city,
+        weather_str, notes, tasks_line, lt_line,
+    )
 
-{date_str} 星期{weekday_str} {time_str}
+    # 推送图片到仓库
+    gh_pat = os.environ.get("GH_PAT", "")
+    remote_url = f"https://dhusuw:{gh_pat}@github.com/dhusuw/-.git"
+    os.chdir(str(script_dir))
+    for cmd in [
+        "git add daily_report.png",
+        "git diff --cached --quiet && exit 0",
+        "git commit -m \"daily report\"",
+        f"git push {remote_url} main",
+    ]:
+        ret = os.system(cmd + " 2>&1")
+        if ret != 0 and "exit 0" not in cmd:
+            print(f"git: {cmd} -> {ret}")
 
-{city}。{weather_line}。{notes_line}
+    # 图片 URL（加时间戳破缓存）
+    ts = now.strftime("%H%M%S")
+    encoded_folder = "%E6%AF%8F%E6%97%A5%E9%97%AE%E5%80%99"
+    img_url = f"https://raw.githubusercontent.com/dhusuw/-/main/{encoded_folder}/{REPORT_FILE}?t={ts}"
 
-今天要做的事：{tasks_line}。
-
-别忘了：{lt_line}。
-
-……别死了。"""
+    title = f"HK416 · {date_str}"
+    desp = f"![report]({img_url})"
 
     result = send_serverchan(sendkey, title, desp)
     print(f"推送结果: {result}")
-
     if result.get("code") != 0:
         raise SystemExit(f"推送失败: {result}")
 
