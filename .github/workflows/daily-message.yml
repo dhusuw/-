@@ -1,10 +1,10 @@
-name: 每日消息推送
+name: 每日报告推送
 
 on:
   schedule:
     # UTC+8 北京时间每天早上 8:00 → UTC 0:00
     - cron: "0 0 * * *"
-  workflow_dispatch:  # 允许手动触发测试
+  workflow_dispatch:
 
 jobs:
   send:
@@ -12,15 +12,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 发送推送
+      - name: 发送每日报告
         env:
           SCT_SENDKEY: ${{ secrets.SCT_SENDKEY }}
-          MSG_TITLE: "HK416 · 早安"
-          MSG_DESP: |
-            ## 早安，指挥官。
-
-            新的一天。别磨蹭。
-
-            ---
-            *HK416 · {{ date }}*
+          MSG_CITY: "Guangzhou"
         run: python 每日问候/send_daily_msg.py
