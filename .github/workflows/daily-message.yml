@@ -23,4 +23,4 @@ jobs:
 
             ---
             *HK416 · {{ date }}*
-        run: python .github/scripts/send_daily_msg.py
+        run: python 每日问候/send_daily_msg.py
