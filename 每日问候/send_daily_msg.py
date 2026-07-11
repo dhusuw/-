@@ -186,17 +186,15 @@ def main():
 
     desp = f"""![HK416]({PHOTO_URL})
 
-指挥官，早。
+早。
 
-{date_str}，星期{weekday_str}，{time_str}。例行简报。
+{date_str} 星期{weekday_str} {time_str}
 
-{city}，{weather_line}。{notes_line}
+{city}。{weather_line}。{notes_line}
 
-今日事项：{tasks_line}。
+今天要做的事：{tasks_line}。
 
-长期目标：{lt_line}。
-
-以上。别让我说第二遍。"""
+别忘了：{lt_line}。"""
 
     result = send_serverchan(sendkey, title, desp)
     print(f"推送结果: {result}")
