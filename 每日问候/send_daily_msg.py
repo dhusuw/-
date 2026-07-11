@@ -134,7 +134,7 @@ def format_long_term(tasks: dict) -> str:
 
 # ── 照片 ──────────────────────────────────────────────
 
-PHOTO_URL = "https://raw.githubusercontent.com/dhusuw/-/main/%E6%AF%8F%E6%97%A5%E9%97%AE%E5%80%99/50.webp"
+PHOTO_URL = "https://raw.githubusercontent.com/dhusuw/-/main/%E6%AF%8F%E6%97%A5%E9%97%AE%E5%80%99/50_transparent.png"
 
 
 # ── 发送 ──────────────────────────────────────────────
@@ -194,7 +194,9 @@ def main():
 
 今天要做的事：{tasks_line}。
 
-别忘了：{lt_line}。"""
+别忘了：{lt_line}。
+
+……别死了。"""
 
     result = send_serverchan(sendkey, title, desp)
     print(f"推送结果: {result}")
