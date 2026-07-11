@@ -103,6 +103,11 @@ def format_long_term(tasks: dict) -> str:
     return "\n".join(f"▸ {t}" for t in lt)
 
 
+# ── 照片 ──────────────────────────────────────────────
+
+PHOTO_URL = "https://raw.githubusercontent.com/dhusuw/-/main/%E6%AF%8F%E6%97%A5%E9%97%AE%E5%80%99/50.webp"
+
+
 # ── 发送 ──────────────────────────────────────────────
 
 def send_serverchan(sendkey: str, title: str, desp: str) -> dict:
@@ -136,9 +141,18 @@ def main():
     # 3. 组装报告
     title = f"HK416 · {date_str} 早安"
 
-    desp = f"""## 🇭🇰 HK416 · 早安，指挥官。
+    desp = f"""<table><tr>
+<td width="70%">
+
+## HK416 · 早安，指挥官。
 
 **📅 {date_str}  星期{weekday_str}  {time_str}**
+
+</td>
+<td align="right" width="30%">
+<img src="{PHOTO_URL}" width="100" style="border-radius:8px;" />
+</td>
+</tr></table>
 
 ---
 
