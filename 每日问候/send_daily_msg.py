@@ -141,18 +141,11 @@ def main():
     # 3. 组装报告
     title = f"HK416 · {date_str} 早安"
 
-    desp = f"""<table><tr>
-<td width="70%">
+    desp = f"""![HK416]({PHOTO_URL})
 
 ## HK416 · 早安，指挥官。
 
 **📅 {date_str}  星期{weekday_str}  {time_str}**
-
-</td>
-<td align="right" width="30%">
-<img src="{PHOTO_URL}" width="100" style="border-radius:8px;" />
-</td>
-</tr></table>
 
 ---
 
