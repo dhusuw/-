@@ -2,7 +2,9 @@ name: 每日报告推送
 
 on:
   schedule:
-    - cron: "*/10 * * * *"  # 每10分钟测试
+    - cron: "7 1 * * *"   # 北京时间 09:07
+    - cron: "7 4 * * *"   # 北京时间 12:07
+    - cron: "7 10 * * *"  # 北京时间 18:07
   workflow_dispatch:
 
 jobs:
