@@ -1,10 +1,10 @@
-name: 每日报告推送
+name: Daily Report Push
 
 on:
   schedule:
-    - cron: "7 1 * * *"   # 北京时间 09:07
-    - cron: "7 4 * * *"   # 北京时间 12:07
-    - cron: "7 10 * * *"  # 北京时间 18:07
+    - cron: "7 1 * * *"
+    - cron: "7 4 * * *"
+    - cron: "7 10 * * *"
   workflow_dispatch:
 
 jobs:
@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 发送每日报告
+      - name: Send daily report
         env:
           SCT_SENDKEY: ${{ secrets.SCT_SENDKEY }}
           MSG_CITY: "Guangzhou"
