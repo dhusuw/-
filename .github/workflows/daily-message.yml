@@ -2,9 +2,9 @@ name: Daily Report Push
 
 on:
   schedule:
-    - cron: "7 1 * * *"
-    - cron: "7 4 * * *"
-    - cron: "7 10 * * *"
+    - cron: "38 22 * * *"  # 06:38 Beijing
+    - cron: "7 4 * * *"    # 12:07 Beijing
+    - cron: "7 10 * * *"   # 18:07 Beijing
   workflow_dispatch:
 
 jobs:
