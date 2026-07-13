@@ -26,7 +26,7 @@ def get_period(hour: int) -> tuple[str, str]:
     elif 11 <= hour < 14:
         return "中午好", "noon"
     else:
-        return "晚上好", "evening"
+        return "下午好", "evening"
 
 
 # ── 天气 ──────────────────────────────────────────────
